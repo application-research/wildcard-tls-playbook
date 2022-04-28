@@ -1,1 +1,2 @@
 vars/dns-secrets.yaml
+vars/vault-secret

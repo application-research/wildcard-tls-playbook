@@ -1,7 +1,7 @@
 ---
 - name: Wildcard TLS - Create/renew certificates
   hosts: tls_bastion
-  become: true
+  become: false
 
   vars_files:
     - vars/dns-secrets.yaml
@@ -14,7 +14,7 @@
 
     - name: Grab info about the user we're connected as
       user:
-        name: "{{ ansible_env.SUDO_USER or ansible_user_id }}"
+        name: "{{ ansible_user_id }}"
         state: present
       become: false
       register: ansible_user_info
@@ -51,32 +51,102 @@
 
 - name: Wildcard TLS - Retrieve keys and certificates
   hosts: tls_bastion
-  become: true
+  become: false
+
+  vars_files:
+    - vars/dns-secrets.yaml
 
   vars:
     # Git repository where you'll store your TLS materials
     git_repo: "git@github.com:zorlin/wildcard-tls-materials.git"
 
   tasks:
-    - name: Grab info about the user we're connected as
+    - name: Grab info about the user we're connected as (#2)
       user:
-        name: "{{ ansible_env.SUDO_USER or ansible_user_id }}"
+        name: "{{ ansible_user_id }}"
         state: present
-      become: false
       register: ansible_user_info
 
-    - name: Git checkout our wildcard-tls-materials repository.
+    - name: Use Git to locally checkout our wildcard-tls-materials repository.
       ansible.builtin.git:
         repo: "{{ git_repo }}"
-        dest: "{{ ansible_user_info.home }}/wildcard-tls-materials"
+        dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
+      delegate_to: localhost
 
+    - name: Create a directory to hold our certificates
+      file:
+        path: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}"
+        state: directory
+      delegate_to: localhost
 
+    - name: Copy the wildcard certificate to a temporary location
+      fetch:
+        src: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.crt"
+        dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/"
+        flat: true
+
+    - name: Encrypt the wildcard certificate
+      command:
+        cmd: "ansible-vault encrypt --vault-id tls-materials@{{ playbook_dir }}/vars/vault-secret {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/_.{{ dns_domain }}.crt"
+      delegate_to: localhost
+
+    - name: Copy the wildcard key to a temporary location
+      fetch:
+        src: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.key"
+        dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/"
+        flat: true
+
+    - name: Encrypt the wildcard key
+      command:
+        cmd: "ansible-vault encrypt --vault-id tls-materials@{{ playbook_dir }}/vars/vault-secret {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/_.{{ dns_domain }}.key"
+      delegate_to: localhost
+
+    - name: Add the new keys to Git
+      command:
+        cmd: "git add {{ lookup('pipe', 'date +%Y-%m')}}/_.{{ dns_domain }}.crt {{ lookup('pipe', 'date +%Y-%m')}}/_.{{ dns_domain }}.key"
+        chdir: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
+      delegate_to: localhost
+
+    - name: Create a new Git commit with the new materials
+      command:
+        cmd: "git commit -m'Updated keys from {{ lookup('pipe', 'date +%Y-%m')}} via Ansible'"
+        chdir: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
+      delegate_to: localhost
+
+    - name: Push the Git repository
+      command:
+        cmd: "git push"
+        chdir: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
+      delegate_to: localhost
 
 - name: Wildcard TLS - Distribute keys
   hosts: tls_hosts
   become: true
 
+  vars_files:
+    - vars/dns-secrets.yaml
+
   tasks:
-    - name: Print hello world
-      debug:
-        msg: "Hello world"
+    - name: Create the Wildcard TLS directory to hold our certificates
+      file:
+        path: "/etc/wildcard-tls/"
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+
+    - name: Copy the certificates
+      copy:
+        src: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/"
+        dest: "/etc/wildcard-tls/{{ lookup('pipe', 'date +%Y-%m')}}"
+        owner: root
+        group: root
+        mode: 0400
+
+    - name: Create a "latest" symlink for ease of use
+      file:
+        src: "/etc/wildcard-tls/{{ lookup('pipe', 'date +%Y-%m')}}"
+        dest: "/etc/wildcard-tls/latest"
+        owner: root
+        group: root
+        state: link
