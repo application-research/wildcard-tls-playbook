@@ -6,6 +6,12 @@
   vars_files:
     - vars/dns-secrets.yaml
 
+  tasks:
+    - name: Bail if the user hasn't explicitly accepted the Let's Encrypt Terms of Service.
+      fail:
+        msg: Please change LE_ACCEPT_TOS to true after reading the Let's Encrypt ToS.
+      when: LE_ACCEPT_TOS != true
+
 - name: Wildcard TLS - Retrieve keys and certificates
   hosts: tls_bastion
   become: true
