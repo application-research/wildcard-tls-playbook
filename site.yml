@@ -1,0 +1,23 @@
+---
+- name: Wildcard TLS - Create/renew certificates
+  hosts: tls_bastion
+  become: true
+
+  vars_files:
+    - vars/dns-secrets.yaml
+
+- name: Wildcard TLS - Retrieve keys and certificates
+  hosts: tls_bastion
+  become: true
+
+  vars:
+    git_repo_path: "{{ lookup('env', 'HOME') }}/projects/wildcard-tls-materials"
+
+- name: Wildcard TLS - Distribute keys
+  hosts: tls_hosts
+  become: true
+
+  tasks:
+    - name: Print hello world
+      debug:
+        msg: "Hello world"
