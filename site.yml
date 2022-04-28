@@ -12,12 +12,65 @@
         msg: Please change LE_ACCEPT_TOS to true after reading the Let's Encrypt ToS.
       when: LE_ACCEPT_TOS != true
 
+    - name: Grab info about the user we're connected as
+      user:
+        name: "{{ ansible_env.SUDO_USER or ansible_user_id }}"
+        state: present
+      become: false
+      register: ansible_user_info
+
+    - name: Request a certificate
+      command:
+        cmd: "lego --accept-tos --dns cloudflare --domains *.{{ dns_domain }} --email {{ cloudflare_email }} run"
+        creates: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.crt"
+      environment:
+        CF_DNS_API_TOKEN: "{{ CF_DNS_API_TOKEN }}"
+        CF_ZONE_API_TOKEN: "{{ CF_ZONE_API_TOKEN }}"
+      become: false
+      register: request_cert
+
+    - name: Print the results of the certificate request
+      debug:
+        msg: "Requested a certificate. Output was {{ request_cert.stdout_lines }} {{ request_cert.stderr_lines }}"
+      when: request_cert.changed
+
+    - name: Renew our certificate if it's close to expiring
+      command:
+        cmd: "lego --dns cloudflare --domains *.{{ dns_domain }} --email zorlin@gmail.com renew --days 45"
+      environment:
+        CF_DNS_API_TOKEN: "{{ CF_DNS_API_TOKEN }}"
+        CF_ZONE_API_TOKEN: "{{ CF_ZONE_API_TOKEN }}"
+      become: false
+      when: not request_cert.changed
+      register: renew_cert
+
+    - name: Print the results of the renewal request
+      debug:
+        msg: "Requested renewal. Output was {{ renew_cert.stdout_lines }} {{ renew_cert.stderr_lines }}"
+      when: renew_cert.changed
+
 - name: Wildcard TLS - Retrieve keys and certificates
   hosts: tls_bastion
   become: true
 
   vars:
-    git_repo_path: "{{ lookup('env', 'HOME') }}/projects/wildcard-tls-materials"
+    # Git repository where you'll store your TLS materials
+    git_repo: "git@github.com:zorlin/wildcard-tls-materials.git"
+
+  tasks:
+    - name: Grab info about the user we're connected as
+      user:
+        name: "{{ ansible_env.SUDO_USER or ansible_user_id }}"
+        state: present
+      become: false
+      register: ansible_user_info
+
+    - name: Git checkout our wildcard-tls-materials repository.
+      ansible.builtin.git:
+        repo: "{{ git_repo }}"
+        dest: "{{ ansible_user_info.home }}/wildcard-tls-materials"
+
+
 
 - name: Wildcard TLS - Distribute keys
   hosts: tls_hosts
