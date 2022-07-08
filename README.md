@@ -16,4 +16,4 @@ Preparation:
 * Edit `inventory` and fill it with your hosts as appropriate
 
 Running the playbook:
-ansible-playbook site.yml -i inventory --vault-password-file vars/vault-secret
+ansible-playbook site.yml --vault-password-file vars/vault-secret

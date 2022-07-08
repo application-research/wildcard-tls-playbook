@@ -1,7 +1,6 @@
 ---
 - name: Wildcard TLS - Create/renew certificates
   hosts: tls_bastion
-  become: false
 
   vars_files:
     - vars/dns-secrets.yaml
@@ -16,17 +15,15 @@
       user:
         name: "{{ ansible_user_id }}"
         state: present
-      become: false
       register: ansible_user_info
 
     - name: Request a certificate
       command:
-        cmd: "lego --accept-tos --dns cloudflare --domains *.{{ dns_domain }} --email {{ cloudflare_email }} run"
+        cmd: "lego --key-type rsa4096 --accept-tos --dns cloudflare --domains *.{{ dns_domain }} --email {{ cloudflare_email }} run"
         creates: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.crt"
       environment:
         CF_DNS_API_TOKEN: "{{ CF_DNS_API_TOKEN }}"
         CF_ZONE_API_TOKEN: "{{ CF_ZONE_API_TOKEN }}"
-      become: false
       register: request_cert
 
     - name: Print the results of the certificate request
@@ -36,11 +33,10 @@
 
     - name: Renew our certificate if it's close to expiring
       command:
-        cmd: "lego --dns cloudflare --domains *.{{ dns_domain }} --email zorlin@gmail.com renew --days 45"
+        cmd: "lego --key-type rsa4096 --dns cloudflare --domains *.{{ dns_domain }} --email zorlin@gmail.com renew --days 45"
       environment:
         CF_DNS_API_TOKEN: "{{ CF_DNS_API_TOKEN }}"
         CF_ZONE_API_TOKEN: "{{ CF_ZONE_API_TOKEN }}"
-      become: false
       when: not request_cert.changed
       register: renew_cert
 
@@ -49,9 +45,16 @@
         msg: "Requested renewal. Output was {{ renew_cert.stdout_lines }} {{ renew_cert.stderr_lines }}"
       when: renew_cert.changed
 
+#    - name: debug
+#      debug:
+#        msg: "openssl pkcs12 -inkey {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.key -in {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.crt -export -out {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.pfx -password pass:{{ pfx_password }}"
+
+    - name: Create a PFX-formatted certificate
+      command: "openssl pkcs12 -inkey {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.key -in {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.crt -export -out {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.pfx -password \"pass:{{ pfx_password }}\""
+      when: request_cert.changed or renew_cert.stdout | length > 0
+
 - name: Wildcard TLS - Retrieve keys and certificates
   hosts: tls_bastion
-  become: false
 
   vars_files:
     - vars/dns-secrets.yaml
@@ -90,6 +93,17 @@
         cmd: "ansible-vault encrypt --vault-id tls-materials@{{ playbook_dir }}/vars/vault-secret {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/_.{{ dns_domain }}.crt"
       delegate_to: localhost
 
+    - name: Copy the wildcard certificate chain to a temporary location
+      fetch:
+        src: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.issuer.crt"
+        dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/"
+        flat: true
+
+    - name: Encrypt the wildcard certificate chain
+      command:
+        cmd: "ansible-vault encrypt --vault-id tls-materials@{{ playbook_dir }}/vars/vault-secret {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/_.{{ dns_domain }}.issuer.crt"
+      delegate_to: localhost
+
     - name: Copy the wildcard key to a temporary location
       fetch:
         src: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.key"
@@ -101,9 +115,20 @@
         cmd: "ansible-vault encrypt --vault-id tls-materials@{{ playbook_dir }}/vars/vault-secret {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/_.{{ dns_domain }}.key"
       delegate_to: localhost
 
+    - name: Copy the wildcard PFX bundle to a temporary location
+      fetch:
+        src: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.pfx"
+        dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/"
+        flat: true
+
+    - name: Encrypt the wildcard PFX bundle
+      command:
+        cmd: "ansible-vault encrypt --vault-id tls-materials@{{ playbook_dir }}/vars/vault-secret {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/_.{{ dns_domain }}.pfx"
+      delegate_to: localhost
+
     - name: Add the new keys to Git
       command:
-        cmd: "git add {{ lookup('pipe', 'date +%Y-%m')}}/_.{{ dns_domain }}.crt {{ lookup('pipe', 'date +%Y-%m')}}/_.{{ dns_domain }}.key"
+        cmd: "git add {{ lookup('pipe', 'date +%Y-%m')}}/_.{{ dns_domain }}.crt {{ lookup('pipe', 'date +%Y-%m')}}/_.{{ dns_domain }}.key {{ lookup('pipe', 'date +%Y-%m')}}/_.{{ dns_domain }}.pfx {{ lookup('pipe', 'date +%Y-%m')}}/_.{{ dns_domain }}.issuer.crt"
         chdir: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
       delegate_to: localhost
 
