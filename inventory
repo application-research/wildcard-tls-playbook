@@ -2,7 +2,11 @@
 meriwell
 
 [tls_hosts]
-foreman01
 torrent
 dns01
 dns02
+gitlab
+rgbuild01
+rgcryptpad01
+podman02
+checkmk01
