@@ -1,12 +1,5 @@
 [tls_bastion]
-meriwell
+localhost
 
 [tls_hosts]
-torrent
-dns01
-dns02
-gitlab
-rgbuild01
-rgcryptpad01
-podman02
-checkmk01
+localhost
