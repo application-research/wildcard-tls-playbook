@@ -121,12 +121,12 @@
       delegate_to: localhost
 
     - name: Encrypt the haproxy pem file
-      ansible.builtin.command:
+      ansible.builtin.shell:
         cmd: "ansible-vault encrypt --vault-id tls-materials@{{ playbook_dir }}/vars/vault-secret {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}-combined.pem"
       delegate_to: localhost
 
     - name: Encrypt the wildcard key
-      ansible.builtin.command:
+      ansible.builtin.shell:
         cmd: "ansible-vault encrypt --vault-id tls-materials@{{ playbook_dir }}/vars/vault-secret {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.key"
       delegate_to: localhost
 
@@ -137,7 +137,7 @@
         flat: true
 
     - name: Encrypt the wildcard PFX bundle
-      ansible.builtin.command:
+      ansible.builtin.shell:
         cmd: "ansible-vault encrypt --vault-id tls-materials@{{ playbook_dir }}/vars/vault-secret {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.pfx"
       delegate_to: localhost
 
