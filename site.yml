@@ -17,6 +17,10 @@
         file: "vars/secrets.yml"
       when: repo_secrets_file.stat.exists
 
+    - name: DEBUG - Print playbook_dir
+      ansible.builtin.debug:
+        msg: "Playbook dir is {{ playbook_dir }}"
+
     - name: Check if global secrets exist
       delegate_to: localhost
       connection: local
