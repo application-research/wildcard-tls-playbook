@@ -54,7 +54,7 @@
         creates: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.crt"
       environment:
         CF_DNS_API_TOKEN: "{{ cf_dns_api_token }}"
-        CF_ZONE_API_TOKEN: "{{ cf_dns_api_token }}"
+        CF_ZONE_API_TOKEN: "{{ cf_zone_api_token }}"
       register: request_cert
 
     - name: Print the results of the certificate request
