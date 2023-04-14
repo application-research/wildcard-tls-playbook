@@ -28,6 +28,10 @@
         path: "{{ playbook_dir }}/../../secrets/environments/{{ ehi_environment_name }}.yml"
       register: global_secrets_file
 
+    - name: DEBUG - Print global_secrets_file
+      ansible.builtin.debug:
+        msg: "Global secrets file is {{ global_secrets_file }}"
+
     - name: If global secrets exist, load them in # noqa run-once
       delegate_to: localhost
       connection: local
