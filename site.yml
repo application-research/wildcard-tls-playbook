@@ -5,12 +5,14 @@
   pre_tasks:
     - name: Check if repo-specific secrets file exists
       delegate_to: localhost
+      connection: local
       ansible.builtin.stat:
         path: "{{ playbook_dir }}/vars/secrets.yml"
       register: repo_secrets_file
 
     - name: If repo-specific secrets file exists, load it in
       delegate_to: localhost
+      connection: local
       ansible.builtin.include_vars:
         file: "vars/secrets.yml"
       when: repo_secrets_file.stat.exists
@@ -98,18 +100,21 @@
         repo: "{{ private_key_material_repo }}"
         dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
       delegate_to: localhost
+      connection: local
 
     - name: Create a main directory to hold our certificates
       file:
         path: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}"
         state: directory
       delegate_to: localhost
+      connection: local
 
     - name: Create a directory to hold our certificates (generic)
       file:
         path: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic"
         state: directory
       delegate_to: localhost
+      connection: local
 
     - name: Copy the wildcard certificate to a temporary location
       fetch:
@@ -134,6 +139,7 @@
         cmd: "cat {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.crt {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.key > {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}-combined.pem"
       no_log: true
       delegate_to: localhost
+      connection: local
 
     - name: Print the path we have on our shell right now
       ansible.builtin.shell:
@@ -141,6 +147,7 @@
         executable: /bin/bash
       register: path
       delegate_to: localhost
+      connection: local
 
     - name: Output the path
       ansible.builtin.debug:
@@ -151,12 +158,14 @@
         cmd: "ansible-vault encrypt --vault-id tls-materials@{{ playbook_dir }}/vars/vault-secret {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}-combined.pem"
         executable: /bin/bash
       delegate_to: localhost
+      connection: local
 
     - name: Encrypt the wildcard key
       ansible.builtin.shell:
         cmd: "ansible-vault encrypt --vault-id tls-materials@{{ playbook_dir }}/vars/vault-secret {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.key"
         executable: /bin/bash
       delegate_to: localhost
+      connection: local
 
     - name: Copy the wildcard PFX bundle to a temporary location
       fetch:
@@ -169,24 +178,28 @@
         cmd: "ansible-vault encrypt --vault-id tls-materials@{{ playbook_dir }}/vars/vault-secret {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.pfx"
         executable: /bin/bash
       delegate_to: localhost
+      connection: local
 
     - name: Add the new keys to Git
       ansible.builtin.command:
         cmd: "git add ."
         chdir: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
       delegate_to: localhost
+      connection: local
 
     - name: Create a new Git commit with the new materials
       ansible.builtin.command:
         cmd: "git commit -m'Updated keys from {{ lookup('pipe', 'date +%Y-%m')}} via Ansible'"
         chdir: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
       delegate_to: localhost
+      connection: local
 
     - name: Push the Git repository
       ansible.builtin.command:
         cmd: "git push"
         chdir: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
       delegate_to: localhost
+      connection: local
 
 - name: Wildcard TLS - Distribute keys
   hosts: tls_hosts
