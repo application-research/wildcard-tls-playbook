@@ -21,27 +21,19 @@
       ansible.builtin.debug:
         msg: "Playbook dir is {{ playbook_dir }}"
 
-    - name: DEBUG - List all directories two levels up
-      ansible.builtin.debug:
-        msg: "All directories two levels up are {{ lookup('fileglob', '../../**/') }}"
-
     - name: Check if global secrets exist
       delegate_to: localhost
       connection: local
       ansible.builtin.stat:
-        path: "{{ playbook_dir }}/../../secrets/environments/{{ ehi_environment_name }}.yml"
+        path: "{{ (playbook_dir + '/../../secrets/environments/' + ehi_environment_name + '.yml') | path }}"
       register: global_secrets_file
-
-    - name: DEBUG - Print global_secrets_file
-      ansible.builtin.debug:
-        msg: "Global secrets file is {{ global_secrets_file }}"
 
     - name: If global secrets exist, load them in # noqa run-once
       delegate_to: localhost
       connection: local
       run_once: true
       ansible.builtin.include_vars:
-        file: "../../secrets/environments/{{ ehi_environment_name }}.yml"
+        file: "{{ (playbook_dir + '/../../secrets/environments/' + ehi_environment_name + '.yml') | path }}"
       when: global_secrets_file.stat.exists
 
     - name: Set PATH environment variable
