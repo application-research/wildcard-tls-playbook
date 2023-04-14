@@ -21,6 +21,10 @@
       ansible.builtin.debug:
         msg: "Playbook dir is {{ playbook_dir }}"
 
+    - name: DEBUG - List all directories two levels up
+      ansible.builtin.debug:
+        msg: "All directories two levels up are {{ lookup('fileglob', '../../**/') }}"
+
     - name: Check if global secrets exist
       delegate_to: localhost
       connection: local
