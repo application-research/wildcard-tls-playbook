@@ -21,7 +21,7 @@
       delegate_to: localhost
       connection: local
       ansible.builtin.stat:
-        path: "{{ playbook_dir }}/secrets/environments/{{ ehi_environment_name }}.yml"
+        path: "{{ playbook_dir }}/../../secrets/environments/{{ ehi_environment_name }}.yml"
       register: global_secrets_file
 
     - name: If global secrets exist, load them in # noqa run-once
@@ -29,7 +29,7 @@
       connection: local
       run_once: true
       ansible.builtin.include_vars:
-        file: "secrets/environments/{{ ehi_environment_name }}.yml"
+        file: "../../secrets/environments/{{ ehi_environment_name }}.yml"
       when: global_secrets_file.stat.exists
 
     - name: Set PATH environment variable
