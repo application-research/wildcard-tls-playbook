@@ -50,7 +50,12 @@
 
     - name: Print DEBUG info
       ansible.builtin.debug:
-        msg: "{{ cf_dns_api_token }} {{ cf_zone_api_token }}"
+        msg: "{{ cf_zone_api_token }}"
+
+    - name: Print DEBUG info 2
+      ansible.builtin.debug:
+        msg: "{{ cf_dns_api_token }}"
+
 
     - name: Request a certificate
       ansible.builtin.command:
