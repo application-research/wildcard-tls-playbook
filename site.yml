@@ -17,25 +17,6 @@
         file: "vars/secrets.yml"
       when: repo_secrets_file.stat.exists
 
-    - name: DEBUG - Print playbook_dir
-      ansible.builtin.debug:
-        msg: "Playbook dir is {{ playbook_dir }}"
-
-    - name: Check if global secrets exist
-      delegate_to: localhost
-      connection: local
-      ansible.builtin.stat:
-        path: "{{ (playbook_dir + '/../../secrets/environments/' + ehi_environment_name + '.yml') | ansible.builtin.realpath }}"
-      register: global_secrets_file
-
-    - name: If global secrets exist, load them in # noqa run-once
-      delegate_to: localhost
-      connection: local
-      run_once: true
-      ansible.builtin.include_vars:
-        file: "{{ (playbook_dir + '/../../secrets/environments/' + ehi_environment_name + '.yml') | ansible.builtin.realpath }}"
-      when: global_secrets_file.stat.exists
-
     - name: Set PATH environment variable
       ansible.builtin.set_fact:
         ansible_env:
@@ -113,7 +94,7 @@
 
     - name: Create temporary private key file
       ansible.builtin.copy:
-        content: "{{ wildcar_tls_repository_key }}"
+        content: "{{ wildcard_tls_repository_key }}"
         dest: "/tmp/wildcard_tls_key"
         mode: "0600"
       register: temp_key_file
@@ -240,6 +221,11 @@
         chdir: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
       delegate_to: localhost
       connection: local
+
+    - name: Remove temporary private key file
+      ansible.builtin.file:
+        path: "{{ temp_key_file.dest }}"
+        state: absent
 
 - name: Wildcard TLS - Distribute keys
   hosts: tls_hosts
