@@ -135,7 +135,7 @@
         cmd: "{{ item }}"
         chdir: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
       loop:
-        - git config user.name "{{ tls_materials_git_username }}
+        - git config user.name "{{ tls_materials_git_username }}"
         - git config user.email "{{ tls_materials_git_email }}"
       delegate_to: localhost
       connection: local
