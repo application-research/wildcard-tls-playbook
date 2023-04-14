@@ -53,8 +53,8 @@
         cmd: "lego --key-type rsa4096 --accept-tos --dns cloudflare --domains *.{{ dns_domain }} --email {{ cloudflare_email }} run"
         creates: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.crt"
       environment:
-        CF_DNS_API_TOKEN: "{{ CF_DNS_API_TOKEN }}"
-        CF_ZONE_API_TOKEN: "{{ CF_ZONE_API_TOKEN }}"
+        CF_DNS_API_TOKEN: "{{ cf_dns_api_token }}"
+        CF_ZONE_API_TOKEN: "{{ cf_dns_api_token }}"
       register: request_cert
 
     - name: Print the results of the certificate request
@@ -66,8 +66,8 @@
       ansible.builtin.command:
         cmd: "lego --key-type rsa4096 --dns cloudflare --domains *.{{ dns_domain }} --email {{ cloudflare_email }} renew --days 45"
       environment:
-        CF_DNS_API_TOKEN: "{{ CF_DNS_API_TOKEN }}"
-        CF_ZONE_API_TOKEN: "{{ CF_ZONE_API_TOKEN }}"
+        CF_DNS_API_TOKEN: "{{ cf_dns_api_token }}"
+        CF_ZONE_API_TOKEN: "{{ cf_zone_api_token }}"
       when: not request_cert.changed
       register: renew_cert
 
