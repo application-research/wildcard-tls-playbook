@@ -50,7 +50,7 @@
 
     - name: Print DEBUG info
       ansible.builtin.debug:
-        msg: "{{ cf_zone_api_token }}"
+        msg: "{{ proxmox_token_secret }}"
 
     - name: Print DEBUG info 2
       ansible.builtin.debug:
