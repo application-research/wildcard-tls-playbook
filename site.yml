@@ -101,6 +101,14 @@
       delegate_to: localhost
       connection: local
 
+    - name: Ensure ~/.ssh exists
+      ansible.builtin.file:
+        path: "{{ lookup('env', 'HOME') }}/.ssh"
+        state: directory
+        mode: '0700'
+      delegate_to: localhost
+      connection: local
+
     - name: Add GitHub's host keys to known_hosts # noqa line-length - TODO(cleanup): Move this to public group_vars/all
       ansible.builtin.known_hosts:
         name: github.com
