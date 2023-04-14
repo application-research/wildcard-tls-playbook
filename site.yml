@@ -94,8 +94,8 @@
 
     - name: Create temporary private key file
       ansible.builtin.copy:
-        content: "{{ wildcard_tls_repository_key }}"
-        dest: "/tmp/wildcard_tls_key"
+        content: "{{ private_key_material_key }}"
+        dest: "/tmp/private_material_key"
         mode: "0600"
       register: temp_key_file
 
@@ -121,7 +121,7 @@
         dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
       delegate_to: localhost
       connection: local
-      key_file: "/tmp/wildcard_tls_key"
+      key_file: "/tmp/private_material_key"
 
     - name: Create a main directory to hold our certificates
       file:
@@ -217,7 +217,7 @@
 
     - name: Push the Git repository
       ansible.builtin.command:
-        cmd: 'GIT_SSH_COMMAND="ssh -i /tmp/wildcard_tls_key -o IdentitiesOnly=yes" git push'
+        cmd: 'GIT_SSH_COMMAND="ssh -i /tmp/private_material_key -o IdentitiesOnly=yes" git push'
         chdir: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
       delegate_to: localhost
       connection: local
