@@ -2,9 +2,6 @@
 - name: Wildcard TLS - Create/renew certificates
   hosts: tls_bastion
 
-  vars_files:
-    - vars/dns-secrets.yaml
-
   pre_tasks:
     - name: Check if repo-specific secrets file exists
       delegate_to: localhost
