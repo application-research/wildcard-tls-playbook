@@ -37,14 +37,6 @@
         ansible_env:
           PATH: "{{ ansible_env.PATH }}:/usr/local/bin"
 
-    - name: Print DEBUG info
-      ansible.builtin.debug:
-        msg: "{{ proxmox_token_secret }}"
-
-    - name: Print DEBUG info 2
-      ansible.builtin.debug:
-        msg: "{{ cf_dns_api_token }}"
-
   tasks:
     - name: Bail if the user hasn't explicitly accepted the Let's Encrypt Terms of Service.
       ansible.builtin.fail:
