@@ -119,9 +119,9 @@
       ansible.builtin.git:
         repo: "{{ private_key_material_repo }}"
         dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
+        key_file: "/tmp/private_material_key"
       delegate_to: localhost
       connection: local
-      key_file: "/tmp/private_material_key"
 
     - name: Create a main directory to hold our certificates
       file:
