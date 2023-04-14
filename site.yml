@@ -48,6 +48,10 @@
         remote_src: true
         mode: '0755'
 
+    - name: Print DEBUG info
+      ansible.builtin.debug:
+        msg: "{{ cf_dns_api_token }} {{ cf_zone_api_token }}"
+
     - name: Request a certificate
       ansible.builtin.command:
         cmd: "lego --key-type rsa4096 --accept-tos --dns cloudflare --domains *.{{ dns_domain }} --email {{ cloudflare_email }} run"
