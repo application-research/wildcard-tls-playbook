@@ -181,16 +181,25 @@
       ansible.builtin.debug:
         msg: "The path is {{ path.stdout_lines }}"
 
+    - name: Create temporary Ansible Vault encryption keys
+      ansible.builtin.copy:
+        content: "{{ vault_secret_tls_materials }}"
+        dest: "/tmp/vault-tls-materials"
+        mode: "0600"
+      register: temp_key_file
+      delegate_to: localhost
+      connection: local
+
     - name: Encrypt the haproxy pem file
       ansible.builtin.shell:
-        cmd: "ansible-vault encrypt --vault-id tls-materials@{{ playbook_dir }}/vars/vault-secret {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}-combined.pem"
+        cmd: "ansible-vault encrypt --vault-id tls-materials@/tmp/vault-tls-materials {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}-combined.pem"
         executable: /bin/bash
       delegate_to: localhost
       connection: local
 
     - name: Encrypt the wildcard key
       ansible.builtin.shell:
-        cmd: "ansible-vault encrypt --vault-id tls-materials@{{ playbook_dir }}/vars/vault-secret {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.key"
+        cmd: "ansible-vault encrypt --vault-id tls-materials@/tmp/vault-tls-materials {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.key"
         executable: /bin/bash
       delegate_to: localhost
       connection: local
@@ -203,7 +212,7 @@
 
     - name: Encrypt the wildcard PFX bundle
       ansible.builtin.shell:
-        cmd: "ansible-vault encrypt --vault-id tls-materials@{{ playbook_dir }}/vars/vault-secret {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.pfx"
+        cmd: "ansible-vault encrypt --vault-id tls-materials@/tmp/vault-tls-materials {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.pfx"
         executable: /bin/bash
       delegate_to: localhost
       connection: local
@@ -232,6 +241,13 @@
     - name: Remove temporary private key file
       ansible.builtin.file:
         path: "{{ temp_key_file.dest }}"
+        state: absent
+      delegate_to: localhost
+      connection: local
+
+    - name: Remove temporary vault key file
+      ansible.builtin.file:
+        path: "/tmp/vault-tls-materials"
         state: absent
       delegate_to: localhost
       connection: local
