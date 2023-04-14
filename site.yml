@@ -123,6 +123,7 @@
 
     - name: Use Git to locally checkout our wildcard-tls-materials repository.
       ansible.builtin.git:
+        accept_hostkey: true
         repo: "{{ private_key_material_repo }}"
         dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
         key_file: "/tmp/private_material_key"
