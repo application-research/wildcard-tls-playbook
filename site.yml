@@ -22,6 +22,7 @@
       connection: local
       ansible.builtin.stat:
         path: "{{ playbook_dir }}/secrets/environments/{{ ehi_environment_name }}.yml"
+      register: global_secrets_file
 
     - name: If global secrets exist, load them in # noqa run-once
       delegate_to: localhost
