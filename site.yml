@@ -242,7 +242,7 @@
       connection: local
 
     - name: Push the Git repository
-      ansible.builtin.command:
+      ansible.builtin.shell:
         cmd: 'GIT_SSH_COMMAND="ssh -i /tmp/private_material_key -o IdentitiesOnly=yes" git push'
         chdir: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
       delegate_to: localhost
