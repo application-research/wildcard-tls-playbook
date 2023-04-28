@@ -1,0 +1,25 @@
+---
+- name: Copy the wildcard certificate to a temporary location
+  fetch:
+    src: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.crt"
+    dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/"
+    flat: true
+
+- name: Copy the wildcard certificate chain to a temporary location
+  fetch:
+    src: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.issuer.crt"
+    dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/"
+    flat: true
+
+- name: Copy the wildcard key to a temporary location
+  fetch:
+    src: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.key"
+    dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/"
+    flat: true
+
+- name: Build a haproxy-compatible pem file
+  ansible.builtin.shell:
+    cmd: "cat {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.crt {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.key > {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}-combined.pem"
+  no_log: true
+  delegate_to: localhost
+  connection: local

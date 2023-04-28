@@ -1,6 +1,11 @@
 ---
 - name: Wildcard TLS - Create/renew certificates
   hosts: tls_bastion
+  vars:
+    dns_domains:
+      - "*.edge.estuary.tech"
+      - "*.delta.estuary.tech"
+      - "*.estuary.tech"
 
   pre_tasks:
     - name: Check if repo-specific secrets file exists
@@ -48,33 +53,11 @@
         remote_src: true
         mode: '0755'
 
-    - name: Request a certificate
-      ansible.builtin.command:
-        cmd: "lego --key-type rsa4096 --accept-tos --dns cloudflare --domains *.{{ dns_domain }} --email {{ cloudflare_email }} run"
-        creates: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.crt"
-      environment:
-        CF_DNS_API_TOKEN: "{{ cf_dns_api_token }}"
-        CF_ZONE_API_TOKEN: "{{ cf_zone_api_token }}"
-      register: request_cert
-
-    - name: Print the results of the certificate request
-      ansible.builtin.debug:
-        msg: "Requested a certificate. Output was {{ request_cert.stdout_lines }} {{ request_cert.stderr_lines }}"
-      when: request_cert.changed
-
-    - name: Renew our certificate if it's close to expiring
-      ansible.builtin.command:
-        cmd: "lego --key-type rsa4096 --dns cloudflare --domains *.{{ dns_domain }} --email {{ cloudflare_email }} renew --days 45"
-      environment:
-        CF_DNS_API_TOKEN: "{{ cf_dns_api_token }}"
-        CF_ZONE_API_TOKEN: "{{ cf_zone_api_token }}"
-      when: not request_cert.changed
-      register: renew_cert
-
-    - name: Print the results of the renewal request
-      debug:
-        msg: "Requested renewal. Output was {{ renew_cert.stdout_lines }} {{ renew_cert.stderr_lines }}"
-      when: renew_cert.changed
+    - name: Request and renew certificates for all domains
+      include_tasks: tasks/request_and_renew_certs.yml
+      loop: "{{ dns_domains }}"
+      loop_control:
+        loop_var: dns_domain
 
     - name: Create a PFX-formatted certificate
       ansible.builtin.command: "openssl pkcs12 -inkey {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.key -in {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.crt -export -out {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.pfx -password \"pass:{{ pfx_password }}\""
@@ -154,30 +137,17 @@
       delegate_to: localhost
       connection: local
 
-    - name: Copy the wildcard certificate to a temporary location
-      fetch:
-        src: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.crt"
-        dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/"
-        flat: true
+    - name: Copy certificates, keys and bundles for all domains
+      include_tasks: tasks/copy_certs_and_keys.yml
+      loop: "{{ dns_domains }}"
+      loop_control:
+        loop_var: dns_domain
 
-    - name: Copy the wildcard certificate chain to a temporary location
-      fetch:
-        src: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.issuer.crt"
-        dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/"
-        flat: true
-
-    - name: Copy the wildcard key to a temporary location
-      fetch:
-        src: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.key"
-        dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/"
-        flat: true
-
-    - name: Build a haproxy-compatible pem file
-      ansible.builtin.shell:
-        cmd: "cat {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.crt {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.key > {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}-combined.pem"
-      no_log: true
-      delegate_to: localhost
-      connection: local
+    - name: Request and renew certificates for all domains
+      include_tasks: request_and_renew_certs.yml
+      loop: "{{ dns_domains }}"
+      loop_control:
+        loop_var: dns_domain
 
     - name: Print the path we have on our shell right now
       ansible.builtin.shell:

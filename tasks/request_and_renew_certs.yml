@@ -1,0 +1,28 @@
+---
+- name: Request a certificate
+  ansible.builtin.command:
+    cmd: "lego --key-type rsa4096 --accept-tos --dns cloudflare --domains {{ dns_domain }} --email {{ cloudflare_email }} run"
+    creates: "{{ ansible_user_info.home }}/.lego/certificates/_{{ dns_domain }}.crt"
+  environment:
+    CF_DNS_API_TOKEN: "{{ cf_dns_api_token }}"
+    CF_ZONE_API_TOKEN: "{{ cf_zone_api_token }}"
+  register: request_cert
+
+- name: Print the results of the certificate request
+  ansible.builtin.debug:
+    msg: "Requested a certificate. Output was {{ request_cert.stdout_lines }} {{ request_cert.stderr_lines }}"
+  when: request_cert.changed
+
+- name: Renew our certificate if it's close to expiring
+  ansible.builtin.command:
+    cmd: "lego --key-type rsa4096 --dns cloudflare --domains {{ dns_domain }} --email {{ cloudflare_email }} renew --days 45"
+  environment:
+    CF_DNS_API_TOKEN: "{{ cf_dns_api_token }}"
+    CF_ZONE_API_TOKEN: "{{ cf_zone_api_token }}"
+  when: not request_cert.changed
+  register: renew_cert
+
+- name: Print the results of the renewal request
+  debug:
+    msg: "Requested renewal. Output was {{ renew_cert.stdout_lines }} {{ renew_cert.stderr_lines }}"
+  when: renew_cert.changed
