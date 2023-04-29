@@ -1,8 +1,8 @@
 ---
 - name: Request a certificate
   ansible.builtin.command:
-    cmd: "lego --key-type rsa4096 --accept-tos --dns cloudflare --domains {{ dns_domain }} --email {{ cloudflare_email }} run"
-    creates: "{{ ansible_user_info.home }}/.lego/certificates/_{{ dns_domain }}.crt"
+    cmd: "lego --key-type rsa4096 --accept-tos --dns cloudflare --dns.resolvers 1.1.1.1 --domains *.{{ dns_domain }} --email {{ cloudflare_email }} run"
+    creates: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.crt"
   environment:
     CF_DNS_API_TOKEN: "{{ cf_dns_api_token }}"
     CF_ZONE_API_TOKEN: "{{ cf_zone_api_token }}"
@@ -15,7 +15,7 @@
 
 - name: Renew our certificate if it's close to expiring
   ansible.builtin.command:
-    cmd: "lego --key-type rsa4096 --dns cloudflare --domains {{ dns_domain }} --email {{ cloudflare_email }} renew --days 45"
+    cmd: "lego --key-type rsa4096 --dns cloudflare --domains *.{{ dns_domain }} --dns.resolvers 1.1.1.1 --email {{ cloudflare_email }} renew --days 45"
   environment:
     CF_DNS_API_TOKEN: "{{ cf_dns_api_token }}"
     CF_ZONE_API_TOKEN: "{{ cf_zone_api_token }}"
@@ -26,3 +26,8 @@
   debug:
     msg: "Requested renewal. Output was {{ renew_cert.stdout_lines }} {{ renew_cert.stderr_lines }}"
   when: renew_cert.changed
+
+- name: Create a PFX-formatted certificate
+  ansible.builtin.command: "openssl pkcs12 -inkey {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.key -in {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.crt -export -out {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.pfx -password \"pass:{{ pfx_password }}\""
+  # when: request_cert.changed or renew_cert.stdout | length > 0
+  # TODO: make this when conditional also detect {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.pfx not existing

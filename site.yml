@@ -3,9 +3,9 @@
   hosts: tls_bastion
   vars:
     dns_domains:
-      - "*.edge.estuary.tech"
-      - "*.delta.estuary.tech"
-      - "*.estuary.tech"
+      - "edge.estuary.tech"
+      - "delta.estuary.tech"
+      - "estuary.tech"
 
   pre_tasks:
     - name: Check if repo-specific secrets file exists
@@ -58,11 +58,6 @@
       loop: "{{ dns_domains }}"
       loop_control:
         loop_var: dns_domain
-
-    - name: Create a PFX-formatted certificate
-      ansible.builtin.command: "openssl pkcs12 -inkey {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.key -in {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.crt -export -out {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.pfx -password \"pass:{{ pfx_password }}\""
-      # when: request_cert.changed or renew_cert.stdout | length > 0
-      # TODO: make this when conditional also detect {{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.pfx not existing
 
 - name: Wildcard TLS - Retrieve keys and certificates
   hosts: tls_bastion
@@ -144,7 +139,7 @@
         loop_var: dns_domain
 
     - name: Request and renew certificates for all domains
-      include_tasks: request_and_renew_certs.yml
+      include_tasks: tasks/copy_certs_and_keys.yml 
       loop: "{{ dns_domains }}"
       loop_control:
         loop_var: dns_domain
@@ -170,53 +165,11 @@
       delegate_to: localhost
       connection: local
 
-    - name: Encrypt the haproxy pem file
-      ansible.builtin.shell:
-        cmd: "ansible-vault encrypt --vault-id tls-materials@/tmp/vault-tls-materials {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}-combined.pem"
-        executable: /bin/bash
-      delegate_to: localhost
-      connection: local
-
-    - name: Encrypt the wildcard key
-      ansible.builtin.shell:
-        cmd: "ansible-vault encrypt --vault-id tls-materials@/tmp/vault-tls-materials {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.key"
-        executable: /bin/bash
-      delegate_to: localhost
-      connection: local
-
-    - name: Copy the wildcard PFX bundle to a temporary location
-      fetch:
-        src: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.pfx"
-        dest: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/"
-        flat: true
-
-    - name: Encrypt the wildcard PFX bundle
-      ansible.builtin.shell:
-        cmd: "ansible-vault encrypt --vault-id tls-materials@/tmp/vault-tls-materials {{ lookup('env', 'HOME') }}/wildcard-tls-materials/{{ lookup('pipe', 'date +%Y-%m')}}/generic/_.{{ dns_domain }}.pfx"
-        executable: /bin/bash
-      delegate_to: localhost
-      connection: local
-
-    - name: Add the new keys to Git
-      ansible.builtin.command:
-        cmd: "git add ."
-        chdir: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
-      delegate_to: localhost
-      connection: local
-
-    - name: Create a new Git commit with the new materials
-      ansible.builtin.command:
-        cmd: "git commit -m'Updated keys from {{ lookup('pipe', 'date +%Y-%m')}} via Ansible'"
-        chdir: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
-      delegate_to: localhost
-      connection: local
-
-    - name: Push the Git repository
-      ansible.builtin.shell:
-        cmd: 'GIT_SSH_COMMAND="ssh -i /tmp/private_material_key -o IdentitiesOnly=yes" git push'
-        chdir: "{{ lookup('env', 'HOME') }}/wildcard-tls-materials"
-      delegate_to: localhost
-      connection: local
+    - name: Encrypt and commit keys
+      include_tasks: tasks/encrypt_and_commit_keys.yml
+      loop: "{{ dns_domains }}"
+      loop_control:
+        loop_var: dns_domain
 
     - name: Remove temporary private key file
       ansible.builtin.file:
