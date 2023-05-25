@@ -5,6 +5,7 @@
     dns_domains:
       - "edge.estuary.tech"
       - "delta.estuary.tech"
+      - "registry.estuary.tech"
       - "estuary.tech"
 
   pre_tasks:
