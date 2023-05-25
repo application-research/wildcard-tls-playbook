@@ -6,6 +6,7 @@
       - "edge.estuary.tech"
       - "delta.estuary.tech"
       - "registry.estuary.tech"
+      - "receipts.estuary.tech"
       - "estuary.tech"
 
   pre_tasks:
