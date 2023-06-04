@@ -1,13 +1,6 @@
 ---
 - name: Wildcard TLS - Create/renew certificates
   hosts: tls_bastion
-  vars:
-    dns_domains:
-      - "edge.estuary.tech"
-      - "delta.estuary.tech"
-      - "registry.estuary.tech"
-      - "receipts.estuary.tech"
-      - "estuary.tech"
 
   pre_tasks:
     - name: Check if repo-specific secrets file exists
