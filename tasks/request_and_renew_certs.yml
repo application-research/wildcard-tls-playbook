@@ -1,11 +1,16 @@
 ---
+- name: Set PATH environment variable
+  ansible.builtin.set_fact:
+    ansible_env:
+      PATH: "{{ ansible_user_info.home }}/bin:/usr/local/bin"
+
 - name: Request a certificate
   ansible.builtin.command:
-    cmd: "lego --key-type rsa4096 --accept-tos --dns cloudflare --dns.resolvers 1.1.1.1 --domains *.{{ dns_domain }} --email {{ cloudflare_email }} run"
+    cmd: "{{ ansible_user_info.home }}/bin/lego --key-type rsa4096 --accept-tos --dns cloudflare --dns.resolvers 1.1.1.1 --domains *.{{ dns_domain }} --email {{ cloudflare_email }} run"
     creates: "{{ ansible_user_info.home }}/.lego/certificates/_.{{ dns_domain }}.crt"
   environment:
-    CF_DNS_API_TOKEN: "{{ cf_dns_api_token }}"
-    CF_ZONE_API_TOKEN: "{{ cf_zone_api_token }}"
+    CF_DNS_API_TOKEN: "{{ CF_DNS_API_TOKEN }}"
+    CF_ZONE_API_TOKEN: "{{ CF_ZONE_API_TOKEN }}"
   register: request_cert
 
 - name: Print the results of the certificate request
@@ -15,10 +20,10 @@
 
 - name: Renew our certificate if it's close to expiring
   ansible.builtin.command:
-    cmd: "lego --key-type rsa4096 --dns cloudflare --domains *.{{ dns_domain }} --dns.resolvers 1.1.1.1 --email {{ cloudflare_email }} renew --days 45"
+    cmd: "{{ ansible_user_info.home }}/bin/lego --key-type rsa4096 --dns cloudflare --domains *.{{ dns_domain }} --dns.resolvers 1.1.1.1 --email {{ cloudflare_email }} renew --days 45"
   environment:
-    CF_DNS_API_TOKEN: "{{ cf_dns_api_token }}"
-    CF_ZONE_API_TOKEN: "{{ cf_zone_api_token }}"
+    CF_DNS_API_TOKEN: "{{ CF_DNS_API_TOKEN }}"
+    CF_ZONE_API_TOKEN: "{{ CF_ZONE_API_TOKEN }}"
   when: not request_cert.changed
   register: renew_cert
 

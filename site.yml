@@ -41,6 +41,12 @@
         dest: /tmp/lego.tar.gz
         mode: '0755'
 
+    - name: Ensure bin directory
+      ansible.builtin.file:
+        path: "{{ ansible_user_info.home }}/bin/"
+        state: directory
+        mode: '0755'
+
     - name: Unpack the lego binary
       ansible.builtin.unarchive:
         src: /tmp/lego.tar.gz

@@ -1,5 +1,5 @@
 [tls_bastion]
-localhost
+10.1.4.43
 
 [tls_hosts]
-localhost
+10.1.4.43
